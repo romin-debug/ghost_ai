@@ -1,10 +1,21 @@
-import { Button } from "@/components/ui/button";
+import { Suspense } from "react"
+import { redirect } from "next/navigation"
+import { auth } from "@clerk/nextjs/server"
 
 export default function Home() {
   return (
-    <div className="flex flex-1 items-center justify-center">
-      <p>Ghost AI</p>
-      
-    </div>
-  );
+    <Suspense>
+      <HomeRedirect />
+    </Suspense>
+  )
+}
+
+async function HomeRedirect() {
+  const { isAuthenticated, redirectToSignIn } = await auth()
+
+  if (!isAuthenticated) {
+    return redirectToSignIn()
+  }
+
+  redirect("/editor")
 }

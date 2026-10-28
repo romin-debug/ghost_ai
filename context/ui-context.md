@@ -47,6 +47,8 @@ shadcn/ui's variables (`--background`, `--card`, `--primary`, `--border`, etc.) 
 
 Both fonts are loaded via `next/font/google` and applied as CSS variables on the `<html>` element. The base `body` uses Geist Sans with `antialiased`.
 
+Type scale follows the shadcn defaults inside the app: body and UI text is `text-sm`, titles are `font-heading text-base font-medium`, and `font-medium` is used for emphasis. The one display exception is the auth brand panel headline (`font-heading text-4xl font-semibold tracking-tight`, with a `text-lg` lead paragraph). Clerk components use the same family and a `0.875rem` base size (matching `text-sm`) via `lib/auth-appearance.ts`.
+
 ## Border Radius
 
 Radius increases with surface depth — smaller for inner elements, larger for outer containers.
