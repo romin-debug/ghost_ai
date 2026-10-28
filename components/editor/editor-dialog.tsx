@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactNode, RefObject } from "react"
 import { X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,8 @@ interface EditorDialogProps {
   description?: string
   /** Action buttons, rendered right-aligned in the footer bar. */
   footer?: ReactNode
+  /** Element to focus on open. Defaults to the first tabbable element. */
+  initialFocus?: RefObject<HTMLElement | null>
   children?: ReactNode
 }
 
@@ -29,12 +31,14 @@ export function EditorDialog({
   title,
   description,
   footer,
+  initialFocus,
   children,
 }: EditorDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         showCloseButton={false}
+        initialFocus={initialFocus}
         className="gap-5 rounded-3xl bg-elevated/95 p-6 text-copy-primary ring-surface-border backdrop-blur-md sm:max-w-md"
       >
         <DialogHeader>
