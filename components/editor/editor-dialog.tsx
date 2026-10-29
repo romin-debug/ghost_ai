@@ -21,6 +21,8 @@ interface EditorDialogProps {
   footer?: ReactNode
   /** Element to focus on open. Defaults to the first tabbable element. */
   initialFocus?: RefObject<HTMLElement | null>
+  /** Failure message, shown above the footer. */
+  error?: string | null
   children?: ReactNode
 }
 
@@ -32,6 +34,7 @@ export function EditorDialog({
   description,
   footer,
   initialFocus,
+  error,
   children,
 }: EditorDialogProps) {
   return (
@@ -50,6 +53,11 @@ export function EditorDialog({
           )}
         </DialogHeader>
         {children}
+        {error && (
+          <p role="alert" className="text-sm text-error">
+            {error}
+          </p>
+        )}
         {footer && (
           <DialogFooter className="-mx-6 -mb-6 rounded-b-3xl border-surface-border bg-surface/60 px-6 py-4">
             {footer}

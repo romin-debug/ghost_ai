@@ -1,5 +1,7 @@
 import { clerkMiddleware } from "@clerk/nextjs/server"
 
+import { apiError } from "@/lib/api"
+
 const publicRoutes = [
   process.env.NEXT_PUBLIC_CLERK_SIGN_IN_URL,
   process.env.NEXT_PUBLIC_CLERK_SIGN_UP_URL,
@@ -11,10 +13,30 @@ function isPublicRoute(pathname: string) {
   )
 }
 
+function isApiRoute(pathname: string) {
+  return /^\/(api|trpc)(\/|$)/.test(pathname)
+}
+
 export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req.nextUrl.pathname)) {
-    await auth.protect()
+  const { pathname } = req.nextUrl
+
+  if (isPublicRoute(pathname)) {
+    return
   }
+
+  // `auth.protect()` answers signed-out API calls with a 404 or a sign-in
+  // redirect, so API routes get a 401 instead.
+  if (isApiRoute(pathname)) {
+    const { userId } = await auth()
+
+    if (!userId) {
+      return apiError(401, "Unauthorized")
+    }
+
+    return
+  }
+
+  await auth.protect()
 })
 
 export const config = {

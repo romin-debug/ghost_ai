@@ -1,9 +1,12 @@
-/** The current user's relationship to a project. */
-export type ProjectRole = "owner" | "collaborator"
-
+/** A project as listed in the editor sidebar. */
 export interface Project {
+  /** Also the project's Liveblocks room ID. */
   id: string
   name: string
-  slug: string
-  role: ProjectRole
+}
+
+/** The current user's projects, split by their relationship to each. */
+export interface EditorProjects {
+  ownedProjects: Project[]
+  sharedProjects: Project[]
 }

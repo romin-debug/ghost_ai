@@ -9,9 +9,11 @@ interface CreateProjectDialogProps {
   onOpenChange: (open: boolean) => void
   name: string
   onNameChange: (name: string) => void
-  slug: string
+  /** Preview of the new project's ID, which is also its room ID. */
+  roomId: string
   canSubmit: boolean
   isSubmitting: boolean
+  error: string | null
   onSubmit: () => void
 }
 
@@ -20,15 +22,17 @@ export function CreateProjectDialog({
   onOpenChange,
   name,
   onNameChange,
-  slug,
+  roomId,
   canSubmit,
   isSubmitting,
+  error,
   onSubmit,
 }: CreateProjectDialogProps) {
   return (
     <EditorDialog
       open={open}
       onOpenChange={onOpenChange}
+      error={error}
       title="Create project"
       description="Start a new architecture workspace."
       footer={
@@ -69,9 +73,9 @@ export function CreateProjectDialog({
           onChange={(event) => onNameChange(event.target.value)}
         />
         <p className="text-xs text-copy-muted">
-          Slug:{" "}
-          <span className="font-mono text-copy-secondary">
-            {slug || "project-slug"}
+          Room ID:{" "}
+          <span className="font-mono break-all text-copy-secondary">
+            {roomId || "project-name"}
           </span>
         </p>
       </form>

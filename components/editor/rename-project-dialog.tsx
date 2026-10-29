@@ -14,6 +14,7 @@ interface RenameProjectDialogProps {
   onNameChange: (name: string) => void
   canSubmit: boolean
   isSubmitting: boolean
+  error: string | null
   onSubmit: () => void
 }
 
@@ -25,6 +26,7 @@ export function RenameProjectDialog({
   onNameChange,
   canSubmit,
   isSubmitting,
+  error,
   onSubmit,
 }: RenameProjectDialogProps) {
   const inputRef = useRef<HTMLInputElement>(null)
@@ -33,6 +35,7 @@ export function RenameProjectDialog({
     <EditorDialog
       open={open}
       onOpenChange={onOpenChange}
+      error={error}
       title="Rename project"
       description={`Enter a new name for “${currentName}”.`}
       initialFocus={inputRef}

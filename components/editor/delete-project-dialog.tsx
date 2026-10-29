@@ -6,6 +6,7 @@ interface DeleteProjectDialogProps {
   onOpenChange: (open: boolean) => void
   projectName: string
   isSubmitting: boolean
+  error: string | null
   onConfirm: () => void
 }
 
@@ -14,12 +15,14 @@ export function DeleteProjectDialog({
   onOpenChange,
   projectName,
   isSubmitting,
+  error,
   onConfirm,
 }: DeleteProjectDialogProps) {
   return (
     <EditorDialog
       open={open}
       onOpenChange={onOpenChange}
+      error={error}
       title="Delete project"
       description={`“${projectName}” will be permanently deleted. This can’t be undone.`}
       footer={
