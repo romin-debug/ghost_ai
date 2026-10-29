@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
-import type { Project } from "@/types/project"
+import type { EditorProjects, Project } from "@/types/project"
 
-interface ProjectSidebarProps {
+interface ProjectSidebarProps extends EditorProjects {
   isOpen: boolean
   onClose: () => void
-  projects: Project[]
   onCreateProject: () => void
   onRenameProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
@@ -23,16 +22,12 @@ interface ProjectSidebarProps {
 export function ProjectSidebar({
   isOpen,
   onClose,
-  projects,
+  ownedProjects,
+  sharedProjects,
   onCreateProject,
   onRenameProject,
   onDeleteProject,
 }: ProjectSidebarProps) {
-  const ownedProjects = projects.filter((project) => project.role === "owner")
-  const sharedProjects = projects.filter(
-    (project) => project.role === "collaborator"
-  )
-
   return (
     <>
       {/* Mobile only: dims the canvas and closes the sidebar on tap. */}
