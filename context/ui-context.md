@@ -47,7 +47,7 @@ shadcn/ui's variables (`--background`, `--card`, `--primary`, `--border`, etc.) 
 
 Both fonts are loaded via `next/font/google` and applied as CSS variables on the `<html>` element. The base `body` uses Geist Sans with `antialiased`.
 
-Type scale follows the shadcn defaults inside the app: body and UI text is `text-sm`, titles are `font-heading text-base font-medium`, and `font-medium` is used for emphasis. The one display exception is the auth brand panel headline (`font-heading text-4xl font-semibold tracking-tight`, with a `text-lg` lead paragraph). Clerk components use the same family and a `0.875rem` base size (matching `text-sm`) via `lib/auth-appearance.ts`.
+Type scale follows the shadcn defaults inside the app: body and UI text is `text-sm`, titles are `font-heading text-base font-medium`, and `font-medium` is used for emphasis. The display exceptions are the auth brand panel headline (`font-heading text-4xl font-semibold tracking-tight`, with a `text-lg` lead paragraph) and the workspace canvas placeholder heading (`font-heading text-2xl font-medium tracking-tight`). Small uppercase eyebrow labels use `text-xs font-medium tracking-[0.2em] uppercase text-copy-faint`. Clerk components use the same family and a `0.875rem` base size (matching `text-sm`) via `lib/auth-appearance.ts`.
 
 ## Border Radius
 
@@ -107,9 +107,16 @@ shadcn/ui on top of Tailwind. No custom design system. Components live in `compo
 
 ## Layout Patterns
 
-- Editor workspace: full-viewport layout — floating sidebar overlay on the left, center canvas, slide-over AI sidebar on the right.
+- Editor workspace: full-viewport layout — project sidebar on the left, center canvas, slide-over AI sidebar on the right. The canvas is a bordered `rounded-2xl` panel inset `3` from the navbar and edges. From `lg`, it shrinks to make room for whichever sidebars are open, so the three panels sit side by side with a `3` gap. Below `lg`, the sidebars float over the canvas. The navbar shows the project name with a `Workspace` subtitle next to the sidebar toggle. Its right side has `Share` and an `AI` toggle, which is filled brand while the AI sidebar is open.
+- Active list items (e.g. the current room in the project sidebar): `border-brand/25 bg-accent-dim`, `text-copy-primary`, and a small `bg-brand` dot. Project sidebar items link to `/editor/{id}`. The link fills the row beside the action buttons.
 - Sidebars: floating overlay with dark semi-transparent background and subtle border.
 - Modals and dialogs: centered overlay, `rounded-3xl`, dark background with backdrop blur.
+- Share dialog (`sm:max-w-lg`, no footer):
+  - A full-width divider sits below the header.
+  - Owners see two `rounded-2xl border-surface-border bg-surface/60` cards: a `Workspace link` card with an outline `Copy link` button that shows `Copied!` for 2 seconds, and an invite card with an email input (inline `Mail` icon, `h-10 rounded-xl`) and a brand `Invite` button.
+  - Below them is `People with access` with an `N total` count, then one card row per person: an `lg` shadcn `Avatar` (Clerk image, `User` icon fallback on `bg-ai/20`), the name (the email if there's no Clerk name), a role pill, the email below, and a red `Trash2` remove button (owner viewing, collaborator rows only).
+  - Role pills are `rounded-full border text-[0.625rem] tracking-[0.2em] uppercase`: owner `border-brand/30 bg-accent-dim text-brand`, collaborator `border-surface-border text-copy-muted`.
+  - Collaborators see only the people list.
 - Navbar: top bar with dark background and bottom border.
 
 ## Icons

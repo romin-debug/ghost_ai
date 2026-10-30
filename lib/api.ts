@@ -1,3 +1,5 @@
+import type { ProjectAccess } from "@/lib/projects"
+
 /** Error body returned by every API route. */
 export interface ApiErrorBody {
   error: string
@@ -5,6 +7,18 @@ export interface ApiErrorBody {
 
 export function apiError(status: number, message: string): Response {
   return Response.json({ error: message } satisfies ApiErrorBody, { status })
+}
+
+/** Maps a failed owner check to its response, or `null` for the owner. */
+export function projectAccessError(access: ProjectAccess): Response | null {
+  switch (access) {
+    case "owner":
+      return null
+    case "forbidden":
+      return apiError(403, "Only the project owner can do this.")
+    case "not-found":
+      return apiError(404, "Project not found.")
+  }
 }
 
 export type JsonBodyResult = { ok: true; body: unknown } | { ok: false }

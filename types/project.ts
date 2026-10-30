@@ -10,3 +10,11 @@ export interface EditorProjects {
   ownedProjects: Project[]
   sharedProjects: Project[]
 }
+
+export type ProjectRole = "owner" | "collaborator"
+
+/** A project the user can open, and their role on it. */
+export interface ProjectMembership {
+  project: Project
+  role: ProjectRole
+}

@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { cn } from "@/lib/utils"
 
 interface EditorDialogProps {
   open: boolean
@@ -23,6 +24,8 @@ interface EditorDialogProps {
   initialFocus?: RefObject<HTMLElement | null>
   /** Failure message, shown above the footer. */
   error?: string | null
+  /** Extra classes for the dialog panel, e.g. a wider `sm:max-w-*`. */
+  className?: string
   children?: ReactNode
 }
 
@@ -35,6 +38,7 @@ export function EditorDialog({
   footer,
   initialFocus,
   error,
+  className,
   children,
 }: EditorDialogProps) {
   return (
@@ -42,7 +46,10 @@ export function EditorDialog({
       <DialogContent
         showCloseButton={false}
         initialFocus={initialFocus}
-        className="gap-5 rounded-3xl bg-elevated/95 p-6 text-copy-primary ring-surface-border backdrop-blur-md sm:max-w-md"
+        className={cn(
+          "gap-5 rounded-3xl bg-elevated/95 p-6 text-copy-primary ring-surface-border backdrop-blur-md sm:max-w-md",
+          className
+        )}
       >
         <DialogHeader>
           <DialogTitle className="text-copy-primary">{title}</DialogTitle>

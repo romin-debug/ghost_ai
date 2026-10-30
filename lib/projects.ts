@@ -95,6 +95,16 @@ export async function getProjectAccess(
   return project.ownerId === userId ? "owner" : "forbidden"
 }
 
+/** The owner's Clerk user ID, or `null` if the project doesn't exist. */
+export async function getProjectOwnerId(projectId: string) {
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { ownerId: true },
+  })
+
+  return project?.ownerId ?? null
+}
+
 /**
  * Renames a project owned by `ownerId`. Returns `null` if no such project
  * exists, e.g. it was deleted after the access check.

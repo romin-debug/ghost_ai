@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Phase 7: Wire editor home to the project API
+- Phase 9: Share dialog
 
 ## Current Goal
 
-- 07 complete: sidebar and dialogs use real project data and the project API. Waiting on the next feature spec (likely the workspace canvas / Liveblocks room).
+- 09 complete: workspace `Share` dialog. Owners invite and remove collaborators by email and copy the project link. Collaborators see a read-only list enriched with Clerk names and avatars. Waiting on the next feature spec.
 
 ## Completed
 
@@ -61,6 +61,59 @@ Update this file whenever the current phase, active feature, or implementation s
   - [x] Removed `lib/mock-projects.ts`. `types/project.ts` `Project` is now `{ id, name }`. `slug` and `role` were dropped, because the ID carries the slug and the two sidebar lists replace `role`. `EditorProjects` type added.
   - [x] Verified: `next typegen`, `tsc`, `eslint`, and `npm run build` pass (`/editor/[projectId]` is a partial prerender). A temporary `node:test` + `tsx` script (since removed) ran the real handlers and helpers against the local `prisma dev` database, with `@clerk/nextjs/server` stubbed. It checked: the ID helpers (format, accent stripping, truncation without a trailing hyphen, symbol-only → `""`); `POST` with a client ID → `201` with that ID and a trimmed name; duplicate ID → `409` with the message; invalid IDs (caps, number, too long, leading hyphen, empty) → `400`; no or `null` ID → cuid; rename and delete on slug IDs (non-owner `403`, then `204`, then `404`); signed-out `401`; shared list matches a differently cased verified email, excludes the user's own projects and unverified emails, returns `[]` with no emails, and is empty after the owner deletes the project; `loadEditorProjects` returns only `{ id, name }`. Test rows cleaned up (0 left). Against `next start`, signed-out `/editor` and `/editor/{id}` return 307 to Clerk, and `POST /api/projects` returns `401`. **Not yet tested in a browser with a real Clerk session**: create → navigate, rename refresh, delete redirect/refresh, and the dialog error display.
 
+- 08 Editor workspace shell (`context/feature-specs/08-editor-workspace-shell.md`):
+  - [x] Route renamed from `app/editor/[projectId]` to `app/editor/[roomId]` (the URL shape `/editor/{id}` is unchanged, so create → navigate still works). It is a Server Component. Behind `<Suspense>` it calls `getCurrentIdentity()`, and a signed-out user goes to `redirectToSignIn()` (the proxy's `auth.protect()` already redirects first). It then calls `checkProjectAccess(roomId, identity)`. `null` (missing project, no access, or a malformed ID) renders `AccessDenied`. Otherwise it loads the sidebar lists and renders `EditorShell` with `activeProject` (`{ id, name }`). `notFound()` is no longer used.
+  - [x] `lib/project-access.ts`: `getCurrentIdentity()` returns `{ userId, primaryEmail }` or `null` when signed out. `primaryEmail` is `null` if the primary address is missing or unverified. `checkProjectAccess(projectId, identity)` validates the ID with `isValidProjectId`, then runs one `findFirst` for the project where the user is the owner or the primary email matches a collaborator (case-insensitive). It returns `{ project, role: "owner" | "collaborator" }` or `null`.
+  - [x] Sidebar consistency: `loadEditorProjects` now takes the `CurrentIdentity` and matches shared projects against the verified **primary** email only (in 07 it was any verified email). Without this, a project shared with a secondary address would appear in the sidebar but open to `AccessDenied`. `/editor` uses `getCurrentIdentity()` too.
+  - [x] `components/editor/access-denied.tsx`: full-screen centered `bg-base` layout with a `Lock` icon (`size-8 text-copy-faint`), a heading and a one-line message, and a `Back to projects` link to `/editor` (`next/link` styled with `buttonVariants({ variant: "outline" })`). Server Component.
+  - [x] Layout (restyled to match a user-provided reference screenshot): `EditorNavbar` gained optional `projectName` (a truncated `h1` with a `Workspace` subtitle, next to the sidebar toggle) and `actions` (rendered before `UserButton`). `workspace-actions.tsx` has a `Share` outline button (no handler; sharing isn't built) and an `AI` toggle (`Sparkles` + label, `aria-expanded`), which is filled brand cyan (`default` variant) while the AI sidebar is open and `outline` while it's closed. `EditorShell` now takes `activeProject?: Project` instead of `activeProjectId`. In a workspace it renders:
+    - `CanvasPlaceholder`: a bordered `rounded-2xl bg-surface` panel with a faint 64px grid (`--border-default` lines at 30% opacity), a brand radial glow at the top, and an AI glow at the bottom right. In the center are a `Compass` icon tile, a `Workspace shell` eyebrow, a `text-2xl` heading, and a one-line description. It sits in an `absolute inset-3` wrapper. From `lg`, the wrapper's `left`/`right` move to `left-78` / `right-86` while the project / AI sidebar is open, so the panels sit beside the canvas. Below `lg`, the sidebars float over it.
+    - `AiSidebar`: a right-side floating panel that mirrors `ProjectSidebar` (`w-80`, `rounded-2xl`, `bg-surface/90` with blur, slides via transform, `inert` when closed, closed by default). Its header is `AI Copilot` / `Placeholder panel` with a decorative `Sparkles` icon and no close button (the navbar toggle closes it). It contains a "Chat surface pending" card (`Bot` icon tile in `bg-ai/15`) and a dashed "Future hooks" card at the bottom.
+    - `/editor` is unchanged: no title, no actions, `EditorHome`, and the sidebar still overlays.
+  - [x] Current room highlight: `ProjectSidebar` takes `activeProjectId`. Items are now `h-10` with a dot slot. The matching item gets `aria-current="page"`, `border-brand/25 bg-accent-dim`, `text-copy-primary`, and a `bg-brand` dot. The tabs default to Shared when the active room is a shared project, so the highlight is visible on open.
+  - [x] Verified: `next typegen`, `tsc`, `eslint`, and `npm run build` pass (`/editor/[roomId]` is a partial prerender). A temporary `node:test` + `tsx` script (since removed) ran against the local `prisma dev` database with Clerk stubbed. It checked: `getCurrentIdentity` (signed out → `null`; verified primary → email; unverified or missing primary → `primaryEmail: null`); `checkProjectAccess` (owner → `owner`; collaborator with differently cased email → `collaborator`; other email, no email, unknown ID, malformed ID, and empty ID → `null`); and that the sidebar's shared list includes the primary-email project and excludes a secondary-email-only project. Test rows cleaned up (0 left). A static render check confirmed: `AccessDenied` markup (lock icon, `/editor` link, centered); navbar title and actions order, with neither on the home navbar; `AiSidebar` `inert`/transform when closed; canvas placeholder; exactly one `aria-current` item in the sidebar, with the Shared tab default for a shared room. Against `next start`, signed-out `/editor/{id}` and `/editor` return 307 into Clerk's sign-in flow (a dev-instance handshake first, since curl has no dev-browser cookie), and `/sign-in` returns 200. After the restyle, `tsc`, `eslint`, and `npm run build` pass, and the new arbitrary and opacity utilities (`lg:left-78`, `lg:right-86`, `bg-size-[64px_64px]`, `bg-ai/15`, `border-brand/25`, `tracking-[0.2em]`, `transition-[left,right]`) appear in the compiled CSS. **Not yet tested in a browser with a real Clerk session**: the workspace layout visually, the AI toggle, `AccessDenied` for a real non-member, and the highlight after navigation.
+
+- 09 Share dialog (`context/feature-specs/09-share-dialog.md`):
+  - [x] API. `app/api/projects/[projectId]/collaborators/route.ts`:
+    - `GET` returns `200 { collaborators }`, oldest invite first. Any member can call it (owner or collaborator, checked with `getCurrentIdentity` + `checkProjectAccess`). Non-members and unknown or malformed IDs get `404`, so the API doesn't reveal which projects exist.
+    - `POST` (body `{ email }`) returns `201 { collaborator }`. The order is auth `401`, then JSON/input `400`, then owner check (`404` unknown, `403` non-owner). An email that is already a collaborator (case-insensitive) returns `409 { error }`.
+    - `app/api/projects/[projectId]/collaborators/[collaboratorId]/route.ts` `DELETE` returns `204`. It is owner-only. The delete is scoped by `projectId`, so a collaborator ID from another project returns `404` (as does an already-removed one).
+  - [x] Shared modules:
+    - `lib/collaborator-input.ts` (`parseInviteCollaboratorInput`): the email is trimmed and lowercased, must be ≤ 254 chars, and must have a basic `local@domain.tld` shape.
+    - `lib/collaborators.ts`: `listCollaborators`, plus `addCollaborator`, which checks for a case-insensitive duplicate first and maps a racing `P2002` to `null`, and `removeCollaborator`.
+    - `projectAccessError` moved from the project route into `lib/api.ts`, so both routes share it.
+    - `isRecord` is now exported from `lib/project-input.ts`.
+    - `ProjectRole` / `ProjectMembership` moved to `types/project.ts`.
+    - New `types/collaborator.ts` (`{ id, email, name, imageUrl }`).
+  - [x] Clerk enrichment (`lib/collaborator-profiles.ts`, `withClerkProfiles`): one `clerkClient().users.getUserList({ emailAddress })` call per 100 emails. Each user's **verified** addresses map to `{ name: fullName ?? username, imageUrl }`. An email with no Clerk user, or one that only matches an unverified Clerk address, gets `name: null, imageUrl: null`. If the Clerk call fails, the error is logged and the list returns email-only. No local user table.
+  - [x] UI:
+    - The navbar `Share` button (`WorkspaceActions` `onShare`) opens `components/editor/share-dialog.tsx`, which is built on `EditorDialog` and stateless.
+    - `hooks/use-share-dialog.ts` reloads the list on every open, ignoring superseded responses, and holds invite/remove request state (one request at a time, close blocked while busy). It also handles the copy link (`{origin}/editor/{id}` via `navigator.clipboard`, `Copied!` for 2 s, with the timer cleared on unmount). Errors show through `EditorDialog`'s `error`.
+    - Owners get an email input + `Invite` (Enter submits, focused on open), per-row remove buttons, and a `Copy link` footer. Collaborators get the list only. The rows use the new shadcn `components/ui/avatar.tsx` (CLI output, unmodified).
+    - `EditorShell` now takes `workspace?: ProjectMembership` instead of `activeProject`, so it knows the role. `/editor/[roomId]` passes the membership.
+  - [x] Verified: `next typegen`, `tsc`, `eslint`, and `npm run build` pass (both new routes listed as dynamic `ƒ`). A temporary `node:test` + `tsx` script (since removed) ran the real handlers against the local `prisma dev` database, with `@clerk/nextjs/server` stubbed (including `clerkClient().users.getUserList`). It checked:
+    - signed-out `401` on all three handlers;
+    - invite `400` for bad JSON, an array body, a non-string email, an invalid email, and an empty body; `404` for an unknown project;
+    - invite normalizes `"  CASEY@example.com "` to `casey@example.com` and enriches it with the Clerk name and avatar;
+    - a differently cased duplicate returns `409`;
+    - no Clerk user → `name`/`imageUrl` `null`; a user without a full name → username; an unverified Clerk address does not enrich;
+    - the owner and the collaborator both list all entries in invite order; an outsider, a user without an email, and a malformed ID get `404`;
+    - a Clerk failure → email-only list with `200`;
+    - collaborator and outsider invite/remove → `403`, with rows unchanged;
+    - after an invite, the invitee passes `checkProjectAccess` and sees the project in their Shared list;
+    - owner remove → `204` with an empty body, then `404` on repeat; a collaborator ID from another project → `404` and is not deleted; access is revoked after removal;
+    - the refactored project `PATCH`/`DELETE` still return `403`/`404`.
+
+    Test rows were cleaned up (0 left). Against the running dev server, signed-out `GET`/`POST` `/api/projects/{id}/collaborators` and `DELETE …/collaborators/{id}` return `401` JSON. **Not yet tested in a browser with a real Clerk session**: opening the dialog, invite/remove round-trips, the read-only view for a collaborator, real Clerk avatars loading, and copy-link feedback.
+  - [x] Follow-up, Share dialog restyled to match a user-provided reference screenshot:
+    - `EditorDialog` gained an optional `className` prop. The share dialog uses `sm:max-w-lg`.
+    - Layout: a divider below the header, then a `Workspace link` card with `Copy link` / `Copied!`, then an invite card with an email input (inline `Mail` icon, `teammate@company.com` placeholder) and a brand `Invite` button. Copy link moved out of the footer, and there is no footer anymore.
+    - A `People with access` heading with an `N total` count, then one card row per person: an `lg` avatar (`User` icon fallback on `bg-ai/20`), the name (or the email when there's no Clerk name) with an `OWNER` (brand) or `COLLABORATOR` (muted) uppercase pill, the email below, and a red `Trash2` remove button for owners.
+    - Collaborators still see only the description and the people list.
+    - The list now includes the **owner**: `GET …/collaborators` returns `{ owner, collaborators }` (`ProjectPeople` in `types/collaborator.ts`). `owner` comes from Clerk `users.getUser(ownerId)` (`getOwnerProfile`: name, primary email, avatar, or all `null` if Clerk fails) via the new `getProjectOwnerId` in `lib/projects.ts`.
+    - Verified: `tsc`, `eslint`, and `npm run build` pass. A temporary handler test (since removed, 0 rows left) checked the owner and the enriched collaborators for both the owner and a collaborator, and the Clerk-down fallback (all-`null` owner, email-only collaborators, `200`). The new utilities appear in the compiled CSS. `cn` resolves the `sm:max-w-md` → `sm:max-w-lg` override. Not checked visually in a browser.
+- Sidebar navigation (user request, outside a spec): each `ProjectSidebar` item's dot and name are now a `next/link` to `/editor/{id}`, with `aria-current="page"` moved onto the link. Rename and delete stay sibling buttons, because interactive elements can't nest inside a link. Navigating remounts the page, so the sidebar starts closed in the opened workspace. Verified with a static render: one link per item, the right `href`s, exactly one `aria-current`, and no buttons inside links.
+
 ## In Progress
 
 - None.
@@ -72,11 +125,20 @@ Update this file whenever the current phase, active feature, or implementation s
 ## Open Questions
 
 - The auth spec referenced "existing" sign-in/sign-up env vars, but `.env.local` only had the publishable and secret keys. Clerk's standard `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in` and `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up` were added to `.env.local`. They must also be set in any deployment environment.
-- Project slugs: the slug is generated at creation and not changed on rename, because the rename dialog has no slug preview. Superseded by 07: the slug is part of the project ID (`{slug}-{suffix}`) and does not change on rename, so a renamed project's ID/URL keeps the old name. Sidebar items are still plain text. Opening a workspace from the sidebar isn't specced, so a workspace is only reached right after creating it or by URL.
-- Project API scope: `GET /api/projects` returns owned projects only. Shared projects are loaded server-side for the sidebar (07) but are not exposed through the API. Nothing creates collaborators yet (no invite flow is specced). There is no maximum name length and no pagination. `description` is not accepted on create or rename.
+- Project slugs: the slug is generated at creation and not changed on rename, because the rename dialog has no slug preview. Superseded by 07: the slug is part of the project ID (`{slug}-{suffix}`) and does not change on rename, so a renamed project's ID/URL keeps the old name. Sidebar items now link to their workspace (added at the user's request after 09).
+- Collaborator matching (08): the spec defines identity as `userId` + **primary** email, so a collaborator entry for a user's secondary verified email no longer grants access or shows in the Shared list (07 matched any verified email). If secondary addresses should count, change `getCurrentIdentity` to return all verified emails and use that list in both places.
+- `AccessDenied` renders with HTTP 200 (the page streams inside `<Suspense>` with Cache Components). If a 403/404 status is wanted, that needs a spec decision (e.g. `forbidden()` with `experimental.authInterrupts`).
+- Project API scope: `GET /api/projects` returns owned projects only. Shared projects are loaded server-side for the sidebar (07) but are not exposed through the API. Collaborators are created by the 09 invite flow. There is no maximum name length and no pagination. `description` is not accepted on create or rename.
 - Root `metadata` in `app/layout.tsx` is still the create-next-app placeholder ("Create Next App"). App title and description are not specced yet.
 - Local database URL: the `prisma dev` HTTP endpoint (`prisma+postgres://localhost:51213`) rejects Prisma Client 7.10.1 (P6000, "upgrade your client to version 7.2.0", which looks like a version-comparison bug in `prisma dev`), and this crashed `/editor` once it started querying in 07. `.env` and `.env.local` now set `DATABASE_URL` to the direct TCP URL `postgres://postgres:postgres@localhost:51214/template1?sslmode=disable` (the database the old `api_key` pointed to; the old line is kept as a comment). Runtime uses the `adapter-pg` branch, and `prisma migrate status` works over it. The Accelerate branch of `lib/prisma.ts` is unverified until a hosted Prisma Postgres URL is used. The `prisma dev` port can change if the server is recreated.
 - The generated client (`app/generated/prisma`) is gitignored, and no script runs `prisma generate` before `next build`. A clean checkout or CI/Vercel build will fail once code imports `lib/prisma.ts`, unless a `postinstall`/`prebuild` `prisma generate` step is added. This isn't specced yet.
+- Sharing (09), not specced:
+  - Inviting only stores the email. No invitation email or notification is sent, so the invitee gets access once they sign in with that verified primary email.
+  - The owner is shown first in the people list (added in the restyle). They have no remove action.
+  - The owner can add their own email (harmless, since ownership is checked first).
+  - Copy link (the `Workspace link` card) is owner-only, as the spec lists it under owners.
+  - A removed collaborator who has the workspace open keeps it until they reload or navigate.
+  - The sidebar isn't refreshed after invite/remove (the owner's lists don't change).
 
 ## Architecture Decisions
 
@@ -94,6 +156,9 @@ Update this file whenever the current phase, active feature, or implementation s
 - Client hooks live in `hooks/` (the shadcn `@/hooks` alias) and shared domain types in `types/` (`types/project.ts`). Mock data was removed in 07. The editor reads real projects server-side.
 - Database access goes only through the `prisma` singleton in `lib/prisma.ts`. Never construct `PrismaClient` elsewhere. Import the generated types from `@/app/generated/prisma/client`.
 - Ownership on the client is expressed by which list a project is in: `EditorProjects.ownedProjects` vs `sharedProjects`. Only owned items get rename and delete actions. The API still enforces ownership (`403`).
+- Workspace access goes through `lib/project-access.ts` (`getCurrentIdentity` + `checkProjectAccess`), outside the page component. Future workspace-scoped server code (e.g. Liveblocks auth) should reuse it.
+- `EditorShell` serves both `/editor` (no `activeProject`: `EditorHome`) and `/editor/[roomId]` (`activeProject`: project name and `WorkspaceActions` in the navbar, `CanvasPlaceholder`, `AiSidebar`). `EditorNavbar` stays generic through its `projectName` and `actions` props.
+- Collaborator profiles (name, avatar) come from Clerk at read time via `lib/collaborator-profiles.ts` and are never stored. The database keeps only emails. Collaborator mutations are owner-only through `getProjectAccess` + `projectAccessError`, and reads use `checkProjectAccess` (any member).
 - Editor pages are Server Components that load sidebar data through `lib/editor-projects.ts` behind `<Suspense>` and pass it to the client `EditorShell`. Mutations go through the project API from `useProjectActions`, followed by `router.refresh()` / navigation. There is no client-side project cache.
 
 ## Session Notes

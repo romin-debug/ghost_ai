@@ -1,5 +1,4 @@
-import { currentUser } from "@clerk/nextjs/server"
-
+import type { CurrentIdentity } from "@/lib/project-access"
 import { listOwnedProjects, listSharedProjects } from "@/lib/projects"
 import type { EditorProjects, Project } from "@/types/project"
 
@@ -9,20 +8,16 @@ function toProject({ id, name }: Project): Project {
 
 /**
  * Owned and shared projects for the signed-in user's sidebar. Sharing matches
- * collaborator entries against the user's verified email addresses only.
+ * collaborator entries against the user's verified primary email, the same
+ * rule `checkProjectAccess` uses to open a workspace.
  */
-export async function loadEditorProjects(
-  userId: string
-): Promise<EditorProjects> {
-  const user = await currentUser()
-  const emails =
-    user?.emailAddresses
-      .filter((email) => email.verification?.status === "verified")
-      .map((email) => email.emailAddress) ?? []
-
+export async function loadEditorProjects({
+  userId,
+  primaryEmail,
+}: CurrentIdentity): Promise<EditorProjects> {
   const [owned, shared] = await Promise.all([
     listOwnedProjects(userId),
-    listSharedProjects(userId, emails),
+    listSharedProjects(userId, primaryEmail ? [primaryEmail] : []),
   ])
 
   return {

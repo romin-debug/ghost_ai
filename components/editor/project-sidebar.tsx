@@ -1,3 +1,4 @@
+import Link from "next/link"
 import type { LucideIcon } from "lucide-react"
 import { FolderOpen, Pencil, Plus, Trash2, Users, X } from "lucide-react"
 
@@ -10,6 +11,8 @@ import type { EditorProjects, Project } from "@/types/project"
 interface ProjectSidebarProps extends EditorProjects {
   isOpen: boolean
   onClose: () => void
+  /** The open workspace's project ID, highlighted in the lists. */
+  activeProjectId?: string
   onCreateProject: () => void
   onRenameProject: (project: Project) => void
   onDeleteProject: (project: Project) => void
@@ -24,10 +27,18 @@ export function ProjectSidebar({
   onClose,
   ownedProjects,
   sharedProjects,
+  activeProjectId,
   onCreateProject,
   onRenameProject,
   onDeleteProject,
 }: ProjectSidebarProps) {
+  // Open on the tab that contains the current room so its highlight is visible.
+  const defaultTab = sharedProjects.some(
+    (project) => project.id === activeProjectId
+  )
+    ? "shared"
+    : "my-projects"
+
   return (
     <>
       {/* Mobile only: dims the canvas and closes the sidebar on tap. */}
@@ -59,7 +70,7 @@ export function ProjectSidebar({
           </Button>
         </div>
 
-        <Tabs defaultValue="my-projects" className="min-h-0 flex-1 p-3">
+        <Tabs defaultValue={defaultTab} className="min-h-0 flex-1 p-3">
           <TabsList className="w-full">
             <TabsTrigger value="my-projects">My Projects</TabsTrigger>
             <TabsTrigger value="shared">Shared</TabsTrigger>
@@ -68,6 +79,7 @@ export function ProjectSidebar({
             {ownedProjects.length > 0 ? (
               <ProjectList
                 projects={ownedProjects}
+                activeProjectId={activeProjectId}
                 onRenameProject={onRenameProject}
                 onDeleteProject={onDeleteProject}
               />
@@ -77,7 +89,10 @@ export function ProjectSidebar({
           </TabsContent>
           <TabsContent value="shared" className="min-h-0">
             {sharedProjects.length > 0 ? (
-              <ProjectList projects={sharedProjects} />
+              <ProjectList
+                projects={sharedProjects}
+                activeProjectId={activeProjectId}
+              />
             ) : (
               <EmptyState icon={Users} message="No shared projects yet" />
             )}
@@ -97,6 +112,7 @@ export function ProjectSidebar({
 
 interface ProjectListProps {
   projects: Project[]
+  activeProjectId?: string
   /** Omit both handlers to hide item actions, as for shared projects. */
   onRenameProject?: (project: Project) => void
   onDeleteProject?: (project: Project) => void
@@ -104,46 +120,71 @@ interface ProjectListProps {
 
 function ProjectList({
   projects,
+  activeProjectId,
   onRenameProject,
   onDeleteProject,
 }: ProjectListProps) {
   return (
     <ScrollArea className="h-full">
       <ul className="flex flex-col gap-0.5">
-        {projects.map((project) => (
-          <li
-            key={project.id}
-            className="group flex h-9 items-center gap-1 rounded-xl pr-1 pl-3 hover:bg-subtle"
-          >
-            <span className="min-w-0 flex-1 truncate text-sm text-copy-secondary">
-              {project.name}
-            </span>
-            {/* Always visible on touch; revealed on hover or focus with a mouse. */}
-            <div className="flex shrink-0 items-center pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100">
-              {onRenameProject && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Rename ${project.name}`}
-                  onClick={() => onRenameProject(project)}
-                >
-                  <Pencil className="size-4" />
-                </Button>
+        {projects.map((project) => {
+          const isActive = project.id === activeProjectId
+
+          return (
+            <li
+              key={project.id}
+              className={cn(
+                "group flex h-10 items-center gap-1 rounded-xl border border-transparent pr-1 hover:bg-subtle",
+                isActive && "border-brand/25 bg-accent-dim hover:bg-accent-dim"
               )}
-              {onDeleteProject && (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={`Delete ${project.name}`}
-                  className="hover:text-error"
-                  onClick={() => onDeleteProject(project)}
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              )}
-            </div>
-          </li>
-        ))}
+            >
+              {/* Sibling of the action buttons, which can't nest inside a link. */}
+              <Link
+                href={`/editor/${encodeURIComponent(project.id)}`}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl pl-3 text-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  isActive
+                    ? "text-copy-primary"
+                    : "text-copy-secondary hover:text-copy-primary"
+                )}
+              >
+                <span
+                  aria-hidden
+                  className={cn(
+                    "size-1.5 shrink-0 rounded-full",
+                    isActive ? "bg-brand" : "bg-transparent"
+                  )}
+                />
+                <span className="truncate">{project.name}</span>
+              </Link>
+              {/* Always visible on touch; revealed on hover or focus with a mouse. */}
+              <div className="flex shrink-0 items-center pointer-fine:opacity-0 pointer-fine:group-focus-within:opacity-100 pointer-fine:group-hover:opacity-100">
+                {onRenameProject && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Rename ${project.name}`}
+                    onClick={() => onRenameProject(project)}
+                  >
+                    <Pencil className="size-4" />
+                  </Button>
+                )}
+                {onDeleteProject && (
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={`Delete ${project.name}`}
+                    className="hover:text-error"
+                    onClick={() => onDeleteProject(project)}
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                )}
+              </div>
+            </li>
+          )
+        })}
       </ul>
     </ScrollArea>
   )

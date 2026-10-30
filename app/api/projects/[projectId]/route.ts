@@ -1,27 +1,10 @@
 import { auth } from "@clerk/nextjs/server"
 
-import { apiError, readJsonBody } from "@/lib/api"
+import { apiError, projectAccessError, readJsonBody } from "@/lib/api"
 import { parseRenameProjectInput } from "@/lib/project-input"
-import {
-  type ProjectAccess,
-  deleteProject,
-  getProjectAccess,
-  renameProject,
-} from "@/lib/projects"
+import { deleteProject, getProjectAccess, renameProject } from "@/lib/projects"
 
 type ProjectRouteContext = RouteContext<"/api/projects/[projectId]">
-
-/** Maps a failed owner check to its response, or `null` for the owner. */
-function accessError(access: ProjectAccess): Response | null {
-  switch (access) {
-    case "owner":
-      return null
-    case "forbidden":
-      return apiError(403, "Only the project owner can do this.")
-    case "not-found":
-      return apiError(404, "Project not found.")
-  }
-}
 
 export async function PATCH(request: Request, ctx: ProjectRouteContext) {
   const { userId } = await auth()
@@ -43,7 +26,7 @@ export async function PATCH(request: Request, ctx: ProjectRouteContext) {
   }
 
   const { projectId } = await ctx.params
-  const denied = accessError(await getProjectAccess(projectId, userId))
+  const denied = projectAccessError(await getProjectAccess(projectId, userId))
 
   if (denied) {
     return denied
@@ -66,7 +49,7 @@ export async function DELETE(_request: Request, ctx: ProjectRouteContext) {
   }
 
   const { projectId } = await ctx.params
-  const denied = accessError(await getProjectAccess(projectId, userId))
+  const denied = projectAccessError(await getProjectAccess(projectId, userId))
 
   if (denied) {
     return denied
